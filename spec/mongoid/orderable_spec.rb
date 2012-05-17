@@ -52,6 +52,19 @@ describe Mongoid::Orderable do
     orderable :index => false
   end
 
+  class SpecificClassOrderable
+    include Mongoid::Document
+    include Mongoid::Orderable
+
+    orderable :class => SpecificClassOrderable
+  end
+
+  class SpecificClassOrderableChildClass < SpecificClassOrderable
+  end
+
+  class SpecificClassOrderableChildClass2 < SpecificClassOrderable
+  end
+
   describe SimpleOrderable do
     before :each do
       SimpleOrderable.delete_all
@@ -286,4 +299,116 @@ describe Mongoid::Orderable do
     end
   end
 
+  describe SpecificClassOrderable do
+    before :each do
+      SpecificClassOrderable.delete_all
+      2.times do
+        SpecificClassOrderableChildClass.create!
+      end
+      3.times do
+        SpecificClassOrderableChildClass2.create!
+      end
+    end
+
+    def positions
+      SpecificClassOrderable.order_by([:position, :asc]).map(&:position)
+    end
+
+    it 'should set proper position while creation' do
+      positions.should == [1, 2, 3, 4, 5]
+    end
+
+    describe 'removement' do
+
+      describe 'top' do
+        
+        it 'child class' do
+          SpecificClassOrderableChildClass.where(:position => 1).destroy
+          positions.should == [1, 2, 3, 4]
+        end
+
+        it 'parent class' do
+          SpecificClassOrderable.where(:position => 1).destroy
+          positions.should == [1, 2, 3, 4]
+        end
+
+      end
+
+      describe 'bottom' do
+        
+        it 'child class' do
+          SpecificClassOrderableChildClass2.where(:position => 5).destroy
+          positions.should == [1, 2, 3, 4]
+        end
+
+        it 'parent class' do
+          SpecificClassOrderable.where(:position => 5).destroy
+          positions.should == [1, 2, 3, 4]
+        end
+
+      end
+
+      describe 'middle' do
+
+        it 'child class' do
+          SpecificClassOrderableChildClass2.where(:position => 3).destroy
+          positions.should == [1, 2, 3, 4]
+        end
+
+        it 'parent class' do
+          SpecificClassOrderable.where(:position => 3).destroy
+          positions.should == [1, 2, 3, 4]
+        end
+
+      end
+
+    end
+
+    describe 'inserting' do
+
+      describe 'top' do
+        
+        it 'child class' do
+          newbie = SpecificClassOrderableChildClass.create! :move_to => :top
+          positions.should == [1, 2, 3, 4, 5, 6]
+        end
+
+        it 'parent class' do
+          newbie = SpecificClassOrderable.create! :move_to => :top
+          positions.should == [1, 2, 3, 4, 5, 6]
+        end
+
+      end
+
+      describe 'bottom' do
+        
+        it 'child class' do
+          newbie = SpecificClassOrderableChildClass.create! :move_to => :bottom
+          positions.should == [1, 2, 3, 4, 5, 6]
+        end
+
+        it 'parent class' do
+          newbie = SpecificClassOrderable.create! :move_to => :bottom
+          positions.should == [1, 2, 3, 4, 5, 6]
+        end
+
+      end
+
+      describe 'middle' do
+        
+        it 'child class' do
+          newbie = SpecificClassOrderableChildClass.create! :move_to => 4
+          positions.should == [1, 2, 3, 4, 5, 6]
+        end
+
+        it 'parent class' do
+          newbie = SpecificClassOrderable.create! :move_to => 4
+          positions.should == [1, 2, 3, 4, 5, 6]
+        end
+
+      end
+
+    end
+
+  end
 end

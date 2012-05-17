@@ -6,7 +6,8 @@ module Mongoid::Orderable
       configuration = {
         :column => :position,
         :index => true,
-        :scope => nil
+        :scope => nil,
+        :class => self
       }
 
       configuration.merge! options if options.is_a?(Hash)
@@ -26,6 +27,10 @@ module Mongoid::Orderable
 
       define_method :orderable_column do
         configuration[:column]
+      end
+
+      define_method :orderable_class do
+        configuration[:class]
       end
 
       before_save :add_to_list
@@ -103,7 +108,7 @@ private
     if embedded?
       send(metadata.inverse).send(metadata.name).orderable_scope(self)
     else
-      self.class.orderable_scope(self)
+      orderable_class.orderable_scope(self)
     end
   end
 
@@ -113,7 +118,7 @@ private
 
   def apply_position target_position
     if persisted? && !embedded? && orderable_scope_changed?
-      self.class.unscoped.find(_id).remove_from_list
+      orderable_class.unscoped.find(_id).remove_from_list
       self.orderable_position = nil
     end
 
